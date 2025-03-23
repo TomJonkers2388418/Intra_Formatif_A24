@@ -4,11 +4,11 @@ import { MatButtonModule } from '@angular/material/button';
 
 
 @Component({
-    selector: 'app-root',
-    templateUrl: './app.component.html',
-    styleUrls: ['./app.component.css'],
-    standalone: true,
-    imports: [MatButtonModule]
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css'],
+  standalone: true,
+  imports: [MatButtonModule]
 })
 export class AppComponent {
   title = 'Pizza Hub';
@@ -23,7 +23,7 @@ export class AppComponent {
   money: number = 0;
   nbPizzas: number = 0;
 
-  constructor(){
+  constructor() {
     this.connect();
   }
 
@@ -32,21 +32,54 @@ export class AppComponent {
       .withUrl('http://localhost:5282/hubs/pizza')
       .build();
 
-    // TODO: Mettre isConnected à true seulement une fois que la connection au Hub est faite
-    this.isConnected = true;
+
+    // On peut commencer à écouter pour les évènements qui vont déclencher des callbacks
+    this.hubConnection!.on('updateNbUsers', (data) => {
+      // data a le même type que ce qui a été envoyé par le serveur
+      this.nbUsers = data
+    });
+
+    this.hubConnection!.on('UpdateMoney', (data) => {
+      this.money = data
+    });
+
+    this.hubConnection!.on('UpdateNbPizzasAndMoney', (dataNbPizzas: number, dataMoney: number) => {
+      this.nbPizzas = dataNbPizzas
+      this.money = dataMoney
+    });
+
+    this.hubConnection!.on('UpdatePizzaPrice', (data) => {
+      this.pizzaPrice = data
+    });
+
+    // On se connecte au Hub  
+    this.hubConnection
+      .start()
+      .then(() => {
+        console.log('La connexion est active!');
+        // TODO: Mettre isConnected à true seulement une fois que la connection au Hub est faite
+        this.isConnected = true;
+      })
+      .catch(err => console.log('Error while starting connection: ' + err));
+
   }
 
-  selectChoice(selectedChoice:number) {
+  selectChoice(selectedChoice: number) {
+    this.hubConnection!.invoke('SelectChoice', selectedChoice);
     this.selectedChoice = selectedChoice;
   }
 
   unselectChoice() {
+    this.hubConnection!.invoke('UnselectChoice', this.selectedChoice);
     this.selectedChoice = -1;
   }
 
   addMoney() {
+    this.hubConnection!.invoke('AddMoney', this.selectedChoice);
   }
 
   buyPizza() {
+    this.hubConnection!.invoke('BuyPizza', this.selectedChoice);
   }
+
 }
